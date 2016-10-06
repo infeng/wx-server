@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "allowSyntheticDefaultImports": true,
+    "module": "commonjs",
+    "sourceMap": true,
+    "removeComments": true,
+    "types": [
+      "express",
+      "body-parser",
+      "node"
+    ],
+    "outDir": "dist"
+  }
+}
