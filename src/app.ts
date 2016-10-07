@@ -2,6 +2,11 @@ import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import * as http from 'http';
 import * as logger from 'morgan';
+import { init } from './wx';
+
+(async () => {
+  await init();
+})();
 
 const app = express();
 

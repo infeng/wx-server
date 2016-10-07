@@ -5,6 +5,7 @@ import * as request from 'request';
 
 const TOKEN_FOLDER = 'token';
 const JSAPI_TICKET_FOLDER = 'jsapiTicket';
+const REGISTER_WX = 'register.json';
 if(!fs.existsSync(TOKEN_FOLDER)) {
   fs.mkdirSync(TOKEN_FOLDER);
 }
@@ -12,19 +13,23 @@ if(!fs.existsSync(JSAPI_TICKET_FOLDER)) {
   fs.mkdirSync(JSAPI_TICKET_FOLDER);
 }
 
+
 export class WXAPI {
   public token: getAccessTokenResult;
   public jsapi: getJsapiTicketResult;
+  public tokenTimer: NodeJS.Timer;
+  public jsapiTimer: NodeJS.Timer;
   private appId: string;
   private appSecret: string;
-  private receiveUrl: string;
+  public receiveUrl: string;
 
   constructor(appId: string, appSecret: string, receiveUrl) {
     this.appId = appId;
     this.appSecret = appSecret;
     this.receiveUrl = receiveUrl;
 
-    this.jsapi = this.jsapi = null;
+    this.token = this.jsapi = null;
+    this.tokenTimer = this.jsapiTimer = null;
   }
 
   sendToken() {
@@ -128,12 +133,6 @@ export class WXAPI {
 
   getLatestToken(): Promise<getAccessTokenResult> {
     return new Promise((resolve, reject) => {
-      // var now = new Date().getTime() / 1000;
-      // if(this.token.expireTime - (now - this.token.requestTime) < 180) {
-
-      // }else {
-      //   resolve(this.token);
-      // }
       (async () => {
         var tokenTxtFileName = path.join(TOKEN_FOLDER,`${this.appId}_token.txt`);
         try {
@@ -157,11 +156,6 @@ export class WXAPI {
       if(!this.token) {
         return reject(null);
       }
-      // var now = new Date().getTime() / 1000;
-      // if(this.jsapi.expireTime - (now - this.jsapi.requestTime) < 120) {      
-      // }else {
-      //   resolve(this.jsapi);
-      // }
       (async () => {
         var tokenTxtFileName = path.join(JSAPI_TICKET_FOLDER,`${this.appId}_jsapi.txt`);
         try {
@@ -183,39 +177,27 @@ export class WXAPI {
 
 export var wxApis = {};
 
-export async function getLatestToken(appId) {
-  var api = wxApis[appId] as WXAPI;
-  if(api) {
-    let token = await api.getLatestToken();
-    return token;
+export async function register(appId, appSecret, receiveUrl) {
+  var api: WXAPI = wxApis[appId];
+  if(!api) {
+    console.log(`first register appid: ${appId}`);
+    api = new WXAPI(appId, appSecret, receiveUrl);
+    await api.init();
+    wxApis[appId] = api;
   }else {
-    return null;
+    console.log(`update register appid: ${appId}`);
+    api.receiveUrl = receiveUrl;
   }
-}
-
-export async function getLatestJsapiTicket(appId) {
-  var api = wxApis[appId] as WXAPI;
-  if(api) {
-    let jsapi = await api.getLatestJsapiTicket();
-    return jsapi;
-  }else {
-    return null;
-  }  
-}
-
-export async function register(appId, appSecret, receiveUrl) {  
-  var api = new WXAPI(appId, appSecret, receiveUrl);
-  await api.init();
   getTokenTimer(api);
   getJsapiTimer(api);
-  wxApis[appId] = api;
   console.log(`register appId: ${appId}`);
   console.log(`access_token: ${api.token.accessToken} time: ${api.token.requestTime2}`);
-  console.log(`jsapi_ticket: ${api.jsapi.ticket} time: ${api.jsapi.requestTime2}`);
+  console.log(`jsapi_ticket: ${api.jsapi.ticket} time: ${api.jsapi.requestTime2}`); 
+  await addRegister(appId, appSecret, receiveUrl);
   return {
     token: api.token,
     jsapi: api.jsapi,
-  };
+  };  
 }
 
 async function getTokenTimer(api: WXAPI) {
@@ -224,7 +206,8 @@ async function getTokenTimer(api: WXAPI) {
   if(restTime < 0) {
     restTime = 0;
   }
-  setTimeout(async () => {
+  clearTimeout(api.tokenTimer);
+  api.tokenTimer = setTimeout(async () => {
     try {
       await api.getLatestToken();
       await api.sendToken();
@@ -241,7 +224,8 @@ async function getJsapiTimer(api: WXAPI) {
   if(restTime < 0) {
     restTime = 0;
   }
-  setTimeout(async () => {
+  clearTimeout(api.jsapiTimer);
+  api.jsapiTimer = setTimeout(async () => {
     try {
       await api.getLatestJsapiTicket();
       await api.sendJsapi();
@@ -249,5 +233,47 @@ async function getJsapiTimer(api: WXAPI) {
       console.log(err.message);
     }
     getJsapiTimer(api);
-  }, restTime);
+  }, restTime * 1000);
+}
+
+export async function init() {
+  var registerWX = await getRegister();
+  for(var appid in registerWX) {
+    console.log(`re register appid: ${appid}`);
+    await register(appid, registerWX[appid].appSecret, registerWX[appid].receiveUrl);
+  }
+}
+
+function getRegister() {
+  return new Promise((resolve, reject) => {
+    if(fs.existsSync(REGISTER_WX)) {
+      fs.readFile(REGISTER_WX, (err, data) => {
+        if(err) {
+          reject(err);
+        }else {
+          resolve(JSON.parse(data.toString('utf-8')));
+        }
+      });
+    }else {
+      resolve({});
+    }
+  });
+}
+
+function addRegister(appId, appSecret, receiveUrl) {
+  return new Promise(async( resolve, reject) => {
+    var registerWX = await getRegister();
+    registerWX[appId] = {
+      appSecret: appSecret,
+      receiveUrl: receiveUrl,
+    };
+    fs.writeFile(REGISTER_WX, JSON.stringify(registerWX), (err) => {
+      if(err) {
+        console.log(err.message);
+        reject();
+      }else {
+        resolve();
+      }
+    });
+  });
 }
