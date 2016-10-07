@@ -1,7 +1,7 @@
 import * as request from 'request';
 
 function makeWxRequestErrorMessage(result) {
-  return `errorcode: ${result.errorcode}, errmsg: ${result.errmsg}`;
+  return `errorcode: ${result.errcode}, errmsg: ${result.errmsg}`;
 }
 
 export interface getAccessTokenResult {
@@ -10,6 +10,7 @@ export interface getAccessTokenResult {
   expireTime: number,
   /** 请求事件（秒） */
   requestTime: number,  
+  requestTime2: number,
 }
 
 export function getAccessToken(appId: string, appSecret: string): Promise<getAccessTokenResult> {
@@ -27,6 +28,7 @@ export function getAccessToken(appId: string, appSecret: string): Promise<getAcc
             accessToken: result.access_token,
             expireTime: result.expires_in,
             requestTime: new Date().getTime() / 1000,
+            requestTime2: new Date().toLocaleString(),
           });
         }
       }
@@ -38,6 +40,7 @@ export interface getJsapiTicketResult {
   ticket: string,
   expireTime: number;
   requestTime: number;
+  requestTime2: number,
 }
 
 export function getJsapiTicket(accessToken: string): Promise<getJsapiTicketResult> {
@@ -55,6 +58,7 @@ export function getJsapiTicket(accessToken: string): Promise<getJsapiTicketResul
             ticket: result.ticket,
             expireTime: result.expires_in,
             requestTime: new Date().getTime() / 1000,
+            requestTime2: new Date().toLocaleString(),
           });
         }
       }

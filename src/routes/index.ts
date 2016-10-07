@@ -15,12 +15,20 @@ router.post('/register', async (req: express.Request, res: express.Response, nex
     });
     return;
   }
-  var result = await register(appId, appSecret, receiveUrl);
-  res.json({
-    status: 0,
-    token: result.token,
-    jsapi: result.jsapi,
-  });
+  try {
+    var result = await register(appId, appSecret, receiveUrl);
+    res.json({
+      status: 0,
+      token: result.token,
+      jsapi: result.jsapi,
+    });
+  }catch(err) {
+    console.log(err.message);
+    res.json({
+      status: -1,
+      msg: err.message,
+    });
+  }
 });
 
 router.post('/access_token', async (req: express.Request, res: express.Response, next) => {
@@ -32,18 +40,26 @@ router.post('/access_token', async (req: express.Request, res: express.Response,
     });
     return;
   }
-  var token = await getLatestToken(appId);
-  if(!token) {
+  try {
+    var token = await getLatestToken(appId);
+    if(!token) {
+      res.json({
+        status: -1,
+        msg: '该appId未注册',
+      });
+      return;
+    }
+    res.json({
+      status: 0,
+      token: token,
+    });
+  }catch (err) {
+    console.log(err.message);
     res.json({
       status: -1,
-      msg: '该appId未注册',
+      msg: err.message,
     });
-    return;
   }
-  res.json({
-    status: 0,
-    token: token,
-  });
 });
 
 router.post('/jsapi_ticket', async (req: express.Request, res: express.Response, next) => {
@@ -55,16 +71,24 @@ router.post('/jsapi_ticket', async (req: express.Request, res: express.Response,
     });
     return;
   }
-  var jsapi = await getLatestJsapiTicket(appId);
-  if(!jsapi) {
+  try {
+    var jsapi = await getLatestJsapiTicket(appId);
+    if(!jsapi) {
+      res.json({
+        status: -1,
+        msg: '该appId未注册',
+      });
+      return;
+    }
+    res.json({
+      status: 0,
+      jsapi: jsapi,
+    });
+  }catch(err) {
+    console.log(err.message);
     res.json({
       status: -1,
-      msg: '该appId未注册',
-    });
-    return;
+      msg: err.message,
+    });    
   }
-  res.json({
-    status: 0,
-    jsapi: jsapi,
-  });
 });

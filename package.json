@@ -14,10 +14,12 @@
   },
   "bugs": {
     "url": "https://github.com/infeng/wx-server/issues"
-  },  
+  },
   "dependencies": {
+    "@types/morgan": "^1.7.32",
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
+    "morgan": "^1.7.0",
     "request": "^2.75.0"
   },
   "devDependencies": {
