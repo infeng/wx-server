@@ -1,0 +1,15 @@
+{
+  "apps": [{
+    "name": "wx-server",
+    "script": "dist/app.js",
+    "watch": ["dist"],
+    "ignore_watch": ["jsapiTicket", "token", "register.json"],
+    "env": {
+      "NODE_ENV": "development"
+    },
+    "env_production": {
+      "NODE_ENV": "production",
+      "PORT": 3001
+    }
+  }]
+}
