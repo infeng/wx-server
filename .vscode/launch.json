@@ -20,7 +20,7 @@
       "console": "internalConsole",
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/dist/*"
+        "${workspaceRoot}/dist/**/*.js"
       ]
     },
     {
