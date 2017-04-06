@@ -16,7 +16,9 @@
     "url": "https://github.com/infeng/wx-server/issues"
   },
   "dependencies": {
+    "@types/bluebird": "^3.5.2",
     "@types/morgan": "^1.7.32",
+    "bluebird": "^3.5.0",
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "morgan": "^1.7.0",

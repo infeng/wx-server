@@ -3,6 +3,10 @@ import * as path from 'path';
 import { getAccessToken, getAccessTokenResult, getJsapiTicket, getJsapiTicketResult } from './wxRequest';
 import * as request from 'request';
 import { REGISTER_WX, TOKEN_FOLDER, JSAPI_TICKET_FOLDER } from '../config';
+import * as BPromise from 'bluebird';
+const { promisify } = BPromise;
+const writeFile = promisify<any, string, any>(fs.writeFile);
+const readFile = promisify<string, string, string>(fs.readFile);
 
 if(!fs.existsSync(TOKEN_FOLDER)) {
   fs.mkdirSync(TOKEN_FOLDER);
@@ -16,8 +20,8 @@ export class WXAPI {
   public jsapi: getJsapiTicketResult;
   public tokenTimer: NodeJS.Timer;
   public jsapiTimer: NodeJS.Timer;
-  private appId: string;
-  private appSecret: string;
+  public appId: string;
+  public appSecret: string;
   public receiveUrl: string;
 
   constructor(appId: string, appSecret: string, receiveUrl) {
@@ -73,102 +77,50 @@ export class WXAPI {
 
   async init() {
     await this.initToken();
-    await this.initJsapi();    
+    await this.initJsapi();
   }
 
-  private initToken() {
-    return new Promise((resolve, reject) => {
-      var tokenTxtFileName = path.join(TOKEN_FOLDER,`${this.appId}_token.txt`);
-      if(!fs.existsSync(tokenTxtFileName)) {
-        (async () => {
-          try {
-            var token = await this.getLatestToken();
-            this.token = token;
-            fs.writeFile(tokenTxtFileName, JSON.stringify(token),  async(err) => {
-              if(err) return reject(err);
-              resolve();
-            });  
-          }catch(err) {
-            reject(err);
-          }           
-        })();    
-      }else {
-        fs.readFile(tokenTxtFileName, 'utf-8', (err, txt) => {
-          if(err) return reject(err);
-          this.token = JSON.parse(txt);
-          resolve();
-        });        
-      } 
-    });
+  private async initToken() {
+    var tokenTxtFileName = path.join(TOKEN_FOLDER,`${this.appId}_token.txt`);
+    if(!fs.existsSync(tokenTxtFileName)) {
+      var token = await this.getLatestToken();
+      this.token = token;
+      await writeFile(tokenTxtFileName, JSON.stringify(token));
+    }else {
+      this.token = JSON.parse(await readFile(tokenTxtFileName, 'utf-8'));      
+    }
   }
 
-  private initJsapi() {
+  private async initJsapi() {
     var jsapiTxtFileName = path.join(JSAPI_TICKET_FOLDER, `${this.appId}_jsapi.txt`);
-    return new Promise((resolve, reject) => {
-      if(!fs.existsSync(jsapiTxtFileName)) {
-        (async () => {
-          try {
-            var jsapi = await this.getLatestJsapiTicket();
-            this.jsapi = jsapi;
-            fs.writeFile(jsapiTxtFileName, JSON.stringify(jsapi), err => {
-              if(err) return reject(err);
-              resolve();
-            });  
-          }catch(err) {
-            reject(err);
-          }            
-        })();    
-      }else {
-        fs.readFile(jsapiTxtFileName, 'utf-8', (err, txt) => {
-          if(err) return reject(err);
-          this.jsapi = JSON.parse(txt);
-          resolve(); 
-        });        
-      }
-    });    
+    if(!fs.existsSync(jsapiTxtFileName)) {
+      var jsapi = await this.getLatestJsapiTicket();
+      this.jsapi = jsapi;
+      await writeFile(jsapiTxtFileName, JSON.stringify(jsapi));   
+    }else {
+      this.jsapi = JSON.parse(await readFile(jsapiTxtFileName, 'utf-8'));      
+    }
   }
 
-  getLatestToken(): Promise<getAccessTokenResult> {
-    return new Promise((resolve, reject) => {
-      (async () => {
-        var tokenTxtFileName = path.join(TOKEN_FOLDER,`${this.appId}_token.txt`);
-        try {
-          var token = await getAccessToken(this.appId, this.appSecret) as getAccessTokenResult;
-          fs.writeFile(tokenTxtFileName, JSON.stringify(token), err => {
-            if(err) return reject(err);
-            resolve();
-          });          
-          this.token = token;
-          console.log(`get access_token: ${this.token.accessToken} time: ${this.token.requestTime2}`);
-          resolve(token);
-        }catch(err) {
-          reject(err);
-        }
-      })();      
-    });
+  async getLatestToken() {
+    var tokenTxtFileName = path.join(TOKEN_FOLDER,`${this.appId}_token.txt`);
+    var token = await getAccessToken(this.appId, this.appSecret);
+    await writeFile(tokenTxtFileName, JSON.stringify(token));
+    this.token = token;
+    console.log(`get access_token: ${this.token.accessToken} time: ${this.token.requestTime2}`);
+    return Promise.resolve(token);
   }
 
-  getLatestJsapiTicket(): Promise<getJsapiTicketResult> {
-    return new Promise((resolve, reject) => {
-      if(!this.token) {
-        return reject(null);
-      }
-      (async () => {
-        var tokenTxtFileName = path.join(JSAPI_TICKET_FOLDER,`${this.appId}_jsapi.txt`);
-        try {
-          var jsapi = await getJsapiTicket(this.token.accessToken) as getJsapiTicketResult;
-          fs.writeFile(tokenTxtFileName, JSON.stringify(jsapi), err => {
-            if(err) return reject(err);
-            resolve();
-          });          
-          this.jsapi = jsapi;
-          console.log(`get jsapi_ticket: ${this.jsapi.ticket} time: ${this.jsapi.requestTime2}`);
-          resolve(jsapi);
-        }catch(err) {
-          reject(err);
-        }
-      })();        
-    });    
+  async getLatestJsapiTicket() {
+    if (!this.token) {
+      return Promise.reject(null);
+    }
+    var jsapiTxtFileName = path.join(JSAPI_TICKET_FOLDER,`${this.appId}_jsapi.txt`);
+    var jsapi = await getJsapiTicket(this.token.accessToken);
+    await writeFile(jsapiTxtFileName, JSON.stringify(jsapi));
+    this.jsapi = jsapi;
+    console.log(`get jsapi_ticket: ${this.jsapi.ticket} time: ${this.jsapi.requestTime2}`);
+    return Promise.resolve(jsapi);
   }
 }
 
@@ -209,6 +161,7 @@ async function getTokenTimer(api: WXAPI) {
       await api.getLatestToken();
       await api.sendToken();
     }catch(err) {
+      console.log(`appid: ${api.appId} get token error`);
       console.log(err.message);
     }
     getTokenTimer(api);
@@ -227,6 +180,7 @@ async function getJsapiTimer(api: WXAPI) {
       await api.getLatestJsapiTicket();
       await api.sendJsapi();
     }catch(err) {
+      console.log(`appid: ${api.appId} get jsapi error`);
       console.log(err.message);
     }
     getJsapiTimer(api);
@@ -241,36 +195,21 @@ export async function init() {
   }
 }
 
-function getRegister() {
-  return new Promise((resolve, reject) => {
-    if(fs.existsSync(REGISTER_WX)) {
-      fs.readFile(REGISTER_WX, (err, data) => {
-        if(err) {
-          reject(err);
-        }else {
-          resolve(JSON.parse(data.toString('utf-8')));
-        }
-      });
-    }else {
-      resolve({});
-    }
-  });
+async function getRegister() {
+  if(fs.existsSync(REGISTER_WX)) {
+    let data = await readFile(REGISTER_WX, 'utf-8');
+    return Promise.resolve(JSON.parse(data));
+  }else {
+    return Promise.resolve({});
+  }
 }
 
-function addRegister(appId, appSecret, receiveUrl) {
-  return new Promise(async( resolve, reject) => {
-    var registerWX = await getRegister();
-    registerWX[appId] = {
-      appSecret: appSecret,
-      receiveUrl: receiveUrl,
-    };
-    fs.writeFile(REGISTER_WX, JSON.stringify(registerWX), (err) => {
-      if(err) {
-        console.log(err.message);
-        reject();
-      }else {
-        resolve();
-      }
-    });
-  });
+async function addRegister(appId, appSecret, receiveUrl) {
+  var registerWX = await getRegister();
+  registerWX[appId] = {
+    appSecret: appSecret,
+    receiveUrl: receiveUrl,
+  };
+  await writeFile(REGISTER_WX, JSON.stringify(registerWX));
+  return Promise.resolve();
 }
