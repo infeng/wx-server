@@ -10,11 +10,11 @@ export interface getAccessTokenResult {
   expireTime: number,
   /** 请求事件（秒） */
   requestTime: number,  
-  requestTime2: number,
+  requestTime2: string,
 }
 
-export function getAccessToken(appId: string, appSecret: string): Promise<getAccessTokenResult> {
-  return new Promise((resolve, reject) => {
+export function getAccessToken(appId: string, appSecret: string) {
+  return new Promise<getAccessTokenResult>((resolve, reject) => {
     request.get(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`, 
     (err, res, body) => {
       if(err) {
@@ -40,11 +40,11 @@ export interface getJsapiTicketResult {
   ticket: string,
   expireTime: number;
   requestTime: number;
-  requestTime2: number,
+  requestTime2: string,
 }
 
-export function getJsapiTicket(accessToken: string): Promise<getJsapiTicketResult> {
-  return new Promise((resolve, reject) => {
+export function getJsapiTicket(accessToken: string) {
+  return new Promise<getJsapiTicketResult>((resolve, reject) => {
     request.get(`https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=${accessToken}&type=jsapi`, 
     (err, res, body) => {
       if(err) {
