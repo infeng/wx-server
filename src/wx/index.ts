@@ -2,17 +2,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getAccessToken, getAccessTokenResult, getJsapiTicket, getJsapiTicketResult } from './wxRequest';
 import * as request from 'request';
+import { REGISTER_WX, TOKEN_FOLDER, JSAPI_TICKET_FOLDER } from '../config';
 
-const TOKEN_FOLDER = 'token';
-const JSAPI_TICKET_FOLDER = 'jsapiTicket';
-const REGISTER_WX = 'register.json';
 if(!fs.existsSync(TOKEN_FOLDER)) {
   fs.mkdirSync(TOKEN_FOLDER);
 }
 if(!fs.existsSync(JSAPI_TICKET_FOLDER)) {
   fs.mkdirSync(JSAPI_TICKET_FOLDER);
 }
-
 
 export class WXAPI {
   public token: getAccessTokenResult;
