@@ -4,7 +4,8 @@
   "description": "微信accesstoken和jsapi_ticket管理服务",
   "main": "index.js",
   "scripts": {
-    "start": "tsc -p . && node dist/app.js"
+    "start": "tsc -p . && node dist/app.js",
+    "build": "tsc"
   },
   "author": "infeng",
   "license": "MIT",
