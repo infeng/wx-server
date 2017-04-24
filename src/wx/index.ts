@@ -159,7 +159,9 @@ async function getTokenTimer(api: WXAPI) {
   api.tokenTimer = setTimeout(async () => {
     try {
       await api.getLatestToken();
-      await api.sendToken();
+      if (api.receiveUrl) {
+        await api.sendToken();
+      }
     }catch(err) {
       console.log(`appid: ${api.appId} get token error`);
       console.log(err.message);
@@ -178,7 +180,9 @@ async function getJsapiTimer(api: WXAPI) {
   api.jsapiTimer = setTimeout(async () => {
     try {
       await api.getLatestJsapiTicket();
-      await api.sendJsapi();
+      if (api.receiveUrl) {
+        await api.sendJsapi();
+      }
     }catch(err) {
       console.log(`appid: ${api.appId} get jsapi error`);
       console.log(err.message);
